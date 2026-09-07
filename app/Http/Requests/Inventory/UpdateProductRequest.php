@@ -28,7 +28,7 @@ class UpdateProductRequest extends FormRequest
             'sale_price' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['nullable', 'numeric', 'min:0'],
             'unit_of_measure' => ['nullable', 'string', 'max:50'],
-            'image_url' => ['nullable', 'url'],
+            'image_url' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
             'is_pos_item' => ['sometimes', 'boolean'],
             'status' => ['sometimes', 'boolean'],
             'ingredients' => ['nullable', 'array'],
@@ -44,6 +44,8 @@ class UpdateProductRequest extends FormRequest
             'type.in' => 'El tipo de producto no es válido.',
             'ingredients.*.ingredient_id.required' => 'Seleccione un insumo.',
             'ingredients.*.quantity.gt' => 'La cantidad del insumo debe ser mayor a 0.',
+            'image_url.image' => 'La imagen debe ser un archivo válido (JPG, PNG o WebP).',
+            'image_url.max' => 'La imagen no puede superar los 2 MB.',
         ];
     }
 }

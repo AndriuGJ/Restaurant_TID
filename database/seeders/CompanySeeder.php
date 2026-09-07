@@ -20,7 +20,7 @@ class CompanySeeder extends Seeder
             [
                 'name' => 'Restaurante Demo S.A.C.',
                 'commercial_name' => 'Restaurante Demo',
-                'phone' => '(01) 555-1234',
+                'phone' => '98754321',
                 'commercial_address' => 'Av. Larco 123, Miraflores',
                 'ruc' => '20123456789',
                 'social_reason' => 'Restaurante Demo S.A.C.',

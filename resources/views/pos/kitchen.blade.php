@@ -54,7 +54,7 @@
                             <li class="flex items-center justify-between gap-2 border-b border-gray-100 py-1 last:border-0">
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-medium text-gray-900">
-                                        {{ $detail->quantity }} × {{ $detail->product?->name }}
+                                        {{ format_quantity($detail->quantity) }} × {{ $detail->product?->name }}
                                     </p>
                                     @if ($detail->notes)
                                         <p class="truncate text-xs text-gray-500">"{{ $detail->notes }}"</p>

@@ -27,7 +27,7 @@
             <ul class="mt-3 space-y-2">
                 @foreach ($sale->details as $detail)
                     <li class="flex justify-between text-sm">
-                        <span class="text-gray-700">{{ $detail->product?->name }} × {{ $detail->quantity }}</span>
+                        <span class="text-gray-700">{{ $detail->product?->name }} × {{ format_quantity($detail->quantity) }}</span>
                         <span class="font-medium text-gray-900">S/ {{ number_format($detail->subtotal, 2) }}</span>
                     </li>
                 @endforeach
@@ -80,8 +80,18 @@
 
                 <div class="mt-4">
                     <label class="block text-sm font-medium text-gray-700">Comensales</label>
-                    <input type="number" name="guests" value="{{ $sale->guests }}" min="1"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                    <div class="mt-1 flex w-[8.5rem] items-center overflow-hidden rounded-md border border-gray-300 shadow-sm">
+                        <button type="button" data-guests-minus aria-label="Restar un comensal"
+                            class="flex h-8 w-8 items-center justify-center text-gray-600 transition hover:bg-gray-100 hover:text-brand-600 active:bg-gray-200">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" /></svg>
+                        </button>
+                        <input type="number" name="guests" id="guests" value="{{ $sale->guests }}" min="1"
+                            class="h-8 w-10 border-x border-gray-300 text-center text-sm font-semibold text-gray-900 focus:border-brand-500 focus:ring-brand-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        <button type="button" data-guests-plus aria-label="Sumar un comensal"
+                            class="flex h-8 w-8 items-center justify-center bg-brand-500 text-white transition hover:bg-brand-600 active:bg-brand-700">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mt-4">
@@ -100,10 +110,19 @@
                                 @endforeach
                             </select>
                             <input type="number" step="0.01" min="0.01" name="payments[0][amount]" placeholder="Monto" required
-                                class="w-32 rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                                class="payment-amount w-32 rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
                             <button type="button" data-remove-payment
                                 class="text-sm font-medium text-red-600 hover:text-red-500">Quitar</button>
                         </div>
+                    </div>
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-medium text-gray-500">Monto rápido:</span>
+                        @foreach ([20, 50, 100, 200] as $amount)
+                            <button type="button" data-quick-amount="{{ $amount }}"
+                                class="rounded-md border border-gray-200 bg-gray-50 px-3 py-1 text-sm font-semibold text-gray-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                                S/ {{ $amount }}
+                            </button>
+                        @endforeach
                     </div>
                     <p id="payments-sum" class="mt-2 text-sm text-gray-500"></p>
                     @error('payments')
@@ -128,6 +147,21 @@
             const docSelect = document.getElementById('document-type');
             const docHint = document.getElementById('document-hint');
             const clientHint = document.getElementById('client-hint');
+
+            const guestsInput = document.getElementById('guests');
+            const clampGuests = () => {
+                let v = parseInt(guestsInput.value, 10);
+                if (isNaN(v) || v < 1) v = 1;
+                guestsInput.value = v;
+            };
+            document.querySelector('[data-guests-minus]').addEventListener('click', () => {
+                guestsInput.value = Math.max(1, (parseInt(guestsInput.value, 10) || 1) - 1);
+            });
+            document.querySelector('[data-guests-plus]').addEventListener('click', () => {
+                guestsInput.value = (parseInt(guestsInput.value, 10) || 1) + 1;
+            });
+            guestsInput.addEventListener('change', clampGuests);
+            guestsInput.addEventListener('blur', clampGuests);
 
             const clients = {
                 customer: @json(\App\Models\Customers\Customer::orderBy('name')->get(['id', 'name'])),
@@ -197,6 +231,18 @@
                 sumLabel.className = 'mt-2 text-sm ' + (diff < -0.001 ? 'text-red-600' : 'text-green-600');
             };
 
+            document.querySelectorAll('[data-quick-amount]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const active = document.activeElement && document.activeElement.classList;
+                    const target = active && active.contains('payment-amount')
+                        ? document.activeElement
+                        : document.querySelector('.payment-amount');
+                    if (!target) return;
+                    target.value = btn.dataset.quickAmount;
+                    recalc();
+                });
+            });
+
             document.getElementById('add-payment').addEventListener('click', () => {
                 const list = document.getElementById('payments-list');
                 const index = list.querySelectorAll('[data-payment-row]').length;
@@ -209,11 +255,10 @@
 <option value="{{ $method->id }}">{{ $method->name }}</option>\
 @endforeach\
 </select>\
-<input type="number" step="0.01" min="0.01" name="payments[${index}][amount]" placeholder="Monto" required class="w-32 rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">\
+<input type="number" step="0.01" min="0.01" name="payments[${index}][amount]" placeholder="Monto" required class="payment-amount w-32 rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">\
 <button type="button" data-remove-payment class="text-sm font-medium text-red-600 hover:text-red-500">Quitar</button>\
 `;
                 list.appendChild(row);
-                row.querySelector('input').addEventListener('input', recalc);
                 row.querySelector('[data-remove-payment]').addEventListener('click', () => { row.remove(); recalc(); });
             });
 

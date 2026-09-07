@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Configuration\DocumentType;
 use App\Models\Customers\Customer;
 use App\Models\Sales\Sale;
 use App\Models\User;
@@ -65,4 +66,46 @@ test('the ventas report can be filtered by sale type', function () {
     $this->actingAs(createVentasReportAdmin())
         ->get(route('reportes.ventas', ['sale_type' => 'delivery']))
         ->assertOk();
+});
+
+test('the ventas report only offers boleta and factura as document filter', function () {
+    $boleta = DocumentType::factory()->boleta()->create();
+    $factura = DocumentType::factory()->invoice()->create();
+    $dni = DocumentType::factory()->identification()->create();
+
+    $this->actingAs(createVentasReportAdmin())
+        ->get(route('reportes.ventas'))
+        ->assertOk()
+        ->assertSee('value="'.$boleta->id.'"', false)
+        ->assertSee('value="'.$factura->id.'"', false)
+        ->assertDontSee('value="'.$dni->id.'"', false)
+        ->assertSee('Boleta')
+        ->assertSee('Factura');
+});
+
+test('the ventas report can preview the pdf inline', function () {
+    Sale::factory()->paid()->create(['sale_type' => 'pos', 'total' => 100]);
+
+    $response = $this->actingAs(createVentasReportAdmin())
+        ->get(route('reportes.ventas.preview'));
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeaderMissing('Content-Disposition');
+});
+
+test('the ventas report exports a pdf attachment with a dated filename', function () {
+    Sale::factory()->paid()->create(['sale_type' => 'pos', 'total' => 100]);
+
+    $response = $this->actingAs(createVentasReportAdmin())
+        ->get(route('reportes.ventas.export'));
+
+    $disposition = $response->headers->get('Content-Disposition');
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf');
+
+    expect($disposition)->toStartWith('attachment; filename="reporte_ventas_')
+        ->and($disposition)->toEndWith('.pdf"')
+        ->and($disposition)->toMatch('/reporte_ventas_\d{4}-\d{2}-\d{2}_\d{6}\.pdf/');
 });

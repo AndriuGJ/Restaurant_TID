@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Configuration\Company;
+use App\Models\Configuration\DocumentType;
 use App\Models\Configuration\SunatConfig;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
@@ -48,10 +49,12 @@ test('admin can list sunat configs', function () {
 
 test('admin can store a sunat config', function () {
     $company = Company::factory()->create();
+    $documentType = DocumentType::factory()->invoice()->create();
 
     $this->actingAs(createSunatConfigAdmin())
         ->post(route('configuration.sunat-configs.store'), [
             'company_id' => $company->id,
+            'document_type_id' => $documentType->id,
             'start_date' => '2026-01-01',
             'end_date' => '2026-12-31',
             'status' => 'active',
@@ -61,7 +64,29 @@ test('admin can store a sunat config', function () {
         ])
         ->assertRedirect(route('configuration.sunat-configs.index'));
 
-    $this->assertDatabaseHas('sunat_configs', ['company_id' => $company->id, 'max_receipts' => 1000]);
+    $this->assertDatabaseHas('sunat_configs', [
+        'company_id' => $company->id,
+        'document_type_id' => $documentType->id,
+        'max_receipts' => 1000,
+    ]);
+});
+
+test('store sunat config rejects a non-invoice document type', function () {
+    $company = Company::factory()->create();
+    $identificationType = DocumentType::factory()->identification()->create();
+
+    $this->actingAs(createSunatConfigAdmin())
+        ->post(route('configuration.sunat-configs.store'), [
+            'company_id' => $company->id,
+            'document_type_id' => $identificationType->id,
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+            'status' => 'active',
+            'max_receipts' => 1000,
+            'used_receipts' => 0,
+            'card_surcharge_percentage' => 0,
+        ])
+        ->assertSessionHasErrors('document_type_id');
 });
 
 test('store sunat config validates end date is after start date', function () {
@@ -70,6 +95,7 @@ test('store sunat config validates end date is after start date', function () {
     $this->actingAs(createSunatConfigAdmin())
         ->post(route('configuration.sunat-configs.store'), [
             'company_id' => $company->id,
+            'document_type_id' => DocumentType::factory()->invoice()->create()->id,
             'start_date' => '2026-12-31',
             'end_date' => '2026-01-01',
             'status' => 'active',
@@ -87,6 +113,7 @@ test('admin can update a sunat config', function () {
     $this->actingAs(createSunatConfigAdmin())
         ->put(route('configuration.sunat-configs.update', $sunatConfig), [
             'company_id' => $company->id,
+            'document_type_id' => $sunatConfig->document_type_id,
             'start_date' => '2026-01-01',
             'end_date' => '2026-12-31',
             'status' => 'expired',

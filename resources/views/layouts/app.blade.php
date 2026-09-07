@@ -17,14 +17,14 @@
                 class="fixed inset-0 z-30 hidden bg-gray-900/50 lg:hidden"></div>
 
             <aside id="mobile-sidebar"
-                class="fixed inset-y-0 left-0 z-40 flex w-64 max-w-[85vw] -translate-x-full flex-col border-r border-slate-800 bg-slate-900 transition-transform duration-300 dark:bg-slate-950 lg:hidden">
+class="fixed inset-y-0 left-0 z-40 flex w-64 max-w-[85vw] -translate-x-full flex-col border-r border-slate-800 bg-slate-900 transition-transform duration-300 lg:hidden">
                 <div class="flex h-16 items-center justify-between border-b border-slate-800 px-4">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5">
                         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-base"><img src="{{ asset('assets/img/logo.png') }}"></span>
                         <span class="font-display text-xl font-normal tracking-wide text-white">Restaurante</span>
                     </a>
                     <button type="button" data-close-sidebar
-                        class="rounded-lg p-2 text-gray-400 hover:bg-slate-800 hover:text-white dark:hover:bg-slate-800"
+                        class="rounded-lg p-2 text-gray-400 hover:bg-slate-800 hover:text-white"
                         aria-label="Cerrar menú">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -40,13 +40,13 @@
 
             <main class="flex-1 p-6">
                 @if (session('success'))
-                    <div class="mb-4 rounded-md bg-green-50 p-4 text-sm text-green-800 dark:bg-green-900/50 dark:text-green-200">
+                    <div class="mb-4 rounded-md bg-green-50 p-4 text-sm text-green-800">
                         {{ session('success') }}
                     </div>
                 @endif
 
                 @if ($errors->any())
-                    <div class="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/50 dark:text-red-200">
+                    <div class="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-800">
                         <ul class="list-disc space-y-1 pl-5">
                             @foreach ($errors->all() as $error)
                                 <li>{{ $error }}</li>

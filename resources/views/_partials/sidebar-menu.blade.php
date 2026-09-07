@@ -21,6 +21,7 @@
                             ['label' => 'Turnos', 'route' => 'restaurant.shifts.index'],
                             ['label' => 'Cajas', 'route' => 'restaurant.cash-registers.index'],
                             ['label' => 'Delivery', 'route' => 'restaurant.delivery-providers.index'],
+                            ['label' => 'Impresoras', 'route' => 'restaurant.printers.index'],
                         ],
                     ],
                     [

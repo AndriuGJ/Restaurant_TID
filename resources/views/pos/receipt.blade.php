@@ -52,7 +52,7 @@
                 @foreach ($sale->details as $detail)
                     <div class="flex justify-between gap-2">
                         <span class="truncate">{{ $detail->product?->name }}</span>
-                        <span class="whitespace-nowrap">{{ $detail->quantity }} x {{ number_format($detail->unit_price, 2) }}</span>
+                        <span class="whitespace-nowrap">{{ format_quantity($detail->quantity) }} x {{ number_format($detail->unit_price, 2) }}</span>
                     </div>
                     <div class="flex justify-end gap-2">
                         <span>S/ {{ number_format($detail->subtotal, 2) }}</span>
@@ -99,9 +99,16 @@
 
         {{-- Acciones --}}
         <div class="mt-4 flex flex-wrap gap-2 print:hidden">
+            <form method="POST" action="{{ route('pos.sale.receipt.print', $sale) }}" class="flex-1">
+                @csrf
+                <button type="submit"
+                    class="w-full rounded-md bg-brand-500 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-brand-600">
+                    Imprimir en red
+                </button>
+            </form>
             <button type="button" onclick="window.print()"
-                class="flex-1 rounded-md bg-brand-500 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-brand-600">
-                Imprimir ticket
+                class="flex-1 rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+                Imprimir aquí (PC)
             </button>
             @if ($whatsappUrl)
                 <a href="{{ $whatsappUrl }}" target="_blank"
@@ -129,6 +136,13 @@
 
 <style>
     @@media print {
+        @@page {
+            size: 80mm auto;
+            margin: 0;
+        }
+        body {
+            margin: 0;
+        }
         body * {
             visibility: hidden;
         }

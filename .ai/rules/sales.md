@@ -2,6 +2,7 @@
 paths:
   - 'app/Http/Controllers/Sales/**'
   - app/Http/Controllers/Sales/KitchenController.php
+  - app/Http/Controllers/Sales/PosController.php
 ---
 
 # Sales
@@ -15,11 +16,14 @@ KitchenController@index filters SaleDetail where kitchen_status=pending, groups 
 ## Delivery & quick-sale reuse the tableless sale flow
 New delivery and quick-sale orders are created via dedicated GET routes (pos.new.delivery `pos-delivery`, pos.new.quick-sale `pos-venta-rapida`) that start a tableless Sale (table_id null, is_takeaway true) and redirect to the same pos.sale flow. Delivery info (delivery_provider_id, delivery_person_name) is set through the PATCH pos.sale.delivery route using DeliveryInfoRequest. pay()/applyStockKardex()/releaseTable() work identically; releaseTable is a no-op when table_id is null. Kitchen renders DELIVERY/PARA LLEVAR badges from sale.sale_type/is_takeaway.
 
-## Factura electrónica: SunatConfig vigente + serie/número + XML greenter
-Al cobrar (`PosController@pay`) un comprobante tipo `invoice`, la validación en PaySaleRequest exige cliente empresa (CompanyClient) y un SunatConfig activo (status=active, hoy en [start_date,end_date] y used_receipts < max_receipts). Sin config vigente o sin empresa -> error de validación, no se paga. La serie se deriva de DocumentType::nomenclature+'001' (ej 'F001') y el correlativo de used_receipts+1 con 8 dígitos, incrementando used_receipts en la misma transacción. El XML UBL 2.1 se genera bajo demanda con greenter (InvoiceBuilder) en `pos.sale.receipt.xml`; el comprobante HTML/impresión/WhatsApp está en `pos.sale.receipt`. Spatie NO se usa para facturación (no existe paquete SUNAT); se usa greenter/greenter v4.
+## Factura/Boleta: SunatConfig por tipo de comprobante (bloques independientes)
+Boleta vs Factura se distinguen por `DocumentType->nomenclature` ('B' vs 'F'), NO por `type` (ambos son 'invoice'). Cada SunatConfig se asigna a UN tipo de comprobante vía `document_type_id` (columna nullable, FK a document_types, gateado a type='invoice'); serie = nomenclature+'001' (B001/F001) y correlativo = `used_receipts+1` (8 dígitos), incrementando `used_receipts`. Al cobrar, `PosController@pay`/`numberForSale` y `PaySaleRequest` buscan `activeSunatConfig($document_type_id)` (status=active, hoy en [start_date,end_date], used_receipts<max_receipts). Tanto boleta como factura exigen un bloque vigente con tope; si falta -> error `document_type_id`, no se paga. Solo la factura exige además una empresa (RUC) (`validateFacturaClient`). El XML UBL 2.1 se genera bajo demanda con greenter (InvoiceBuilder) en `pos.sale.receipt.xml`; el comprobante HTML/impresión/WhatsApp está en `pos.sale.receipt`. Spatie NO se usa para facturación; se usa greenter/greenter v4.
 
 ## POS requiere caja abierta; ventas se asocian a la sesión activa
 POS requiere una caja abierta: el middleware `ensure.pos.session` (alias en bootstrap/app.php) bloquea las rutas de ventas/cobro/delivery/venta rápida si no hay una CashRegisterSession con status=open, redirigiendo a `pos.requires-session`. Se dejan sin bloquear `pos.hall`, `pos.tables.move` y `pos.kitchen.*` (vistas/preparación). Toda Sale creada (open/delivery/quick) se asocia a `cash_register_session_id` de la sesión abierta más reciente (`activeCashRegisterSession()`), de modo que las ventas quedan registradas en la caja hasta su cierre.
 
 ## POS: boleta sin RUC, factura requiere empresa, vuelto en sales.change
-Boleta vs Factura se distinguen por `documentType->nomenclature` ('B' vs 'F'), NO por `type` (ambos son 'invoice'). La boleta se emite siempre, sin exigir cliente/RUC. La factura exige una empresa (RUC) ya registrada en Clientes y un bloque SUNAT vigente. Los pagos pueden superar el total: el vuelto se calcula como `sum(payments) - total` y se guarda en la columna `sales.change` (nuevo). El comprobante (receipt) se imprime en ticket de 80 mm y muestra pagos + vuelto.
+Boleta vs Factura se distinguen por `documentType->nomenclature` ('B' vs 'F'), NO por `type` (ambos son 'invoice'). La boleta no exige cliente/RUC, pero sí un bloque SUNAT de boletas vigente (ver sección anterior). La factura exige, además del bloque de facturas, una empresa (RUC) ya registrada en Clientes. Los pagos pueden superar el total: el vuelto se calcula como `sum(payments) - total` y se guarda en la columna `sales.change`. El comprobante (receipt) se imprime en ticket de 80 mm y muestra pagos + vuelto.
+
+## Reservas de mesa en POS: lifecycle active→fulfilled/cancelled
+Las reservas se crean desde el canvas POS (hall.blade.php): clic izquierdo abre menú contextual (Realizar venta / Reservar mesa / Cancelar reserva), clic derecho abre la venta directo. Rutas POST/DELETE `pos/tables/reserve` y `pos/tables/reservations.cancel` (permiso pos-ventas, SIN ensure.pos.session, igual que tables.move). Al crear reserva la mesa queda status=reserved; al abrir venta en mesa reservada la reserva pasa a fulfilled y mesa occupied; releaseTable vuelve available (o reserved si quedara reserva activa). El modelo Reservation se guarda en tabla reservations (customer_name, people_count, user_id, status enum active/fulfilled/cancelled).

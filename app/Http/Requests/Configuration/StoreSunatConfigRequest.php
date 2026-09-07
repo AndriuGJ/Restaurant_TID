@@ -20,6 +20,7 @@ class StoreSunatConfigRequest extends FormRequest
     {
         return [
             'company_id' => ['required', 'integer', 'exists:companies,id'],
+            'document_type_id' => ['required', 'integer', Rule::exists('document_types', 'id')->where(fn ($query) => $query->where('type', 'invoice'))],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'status' => ['required', Rule::in(['active', 'inactive', 'expired'])],
@@ -33,6 +34,8 @@ class StoreSunatConfigRequest extends FormRequest
     {
         return [
             'company_id.required' => 'Debe seleccionar la empresa.',
+            'document_type_id.required' => 'Debe seleccionar el tipo de comprobante (boleta o factura).',
+            'document_type_id.exists' => 'El tipo de comprobante seleccionado no es válido.',
             'start_date.required' => 'La fecha de inicio es obligatoria.',
             'end_date.required' => 'La fecha de fin es obligatoria.',
             'end_date.after_or_equal' => 'La fecha de fin debe ser posterior o igual al inicio.',

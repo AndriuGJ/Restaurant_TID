@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -36,7 +37,15 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request): RedirectResponse
     {
         $product = DB::transaction(function () use ($request) {
-            $product = Product::create($request->validated());
+            $data = $request->validated();
+
+            if ($request->hasFile('image_url')) {
+                $data['image_url'] = $request->file('image_url')->store('products', 'public');
+            } else {
+                unset($data['image_url']);
+            }
+
+            $product = Product::create($data);
             $this->syncIngredients($product, $request->input('ingredients', []));
 
             return $product;
@@ -59,7 +68,19 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         DB::transaction(function () use ($request, $product) {
-            $product->update($request->validated());
+            $data = $request->validated();
+
+            if ($request->hasFile('image_url')) {
+                if ($product->image_url) {
+                    Storage::disk('public')->delete($product->image_url);
+                }
+
+                $data['image_url'] = $request->file('image_url')->store('products', 'public');
+            } elseif (! array_key_exists('image_url', $data)) {
+                unset($data['image_url']);
+            }
+
+            $product->update($data);
             $this->syncIngredients($product, $request->input('ingredients', []));
         });
 
@@ -78,6 +99,10 @@ class ProductController extends Controller
         }
 
         DB::transaction(function () use ($product) {
+            if ($product->image_url) {
+                Storage::disk('public')->delete($product->image_url);
+            }
+
             $product->ingredients()->delete();
             $product->delete();
         });

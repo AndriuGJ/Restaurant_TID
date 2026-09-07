@@ -20,6 +20,7 @@ use App\Http\Controllers\Reports\VentasReportController;
 use App\Http\Controllers\Restaurant\CashRegisterController;
 use App\Http\Controllers\Restaurant\DeliveryProviderController;
 use App\Http\Controllers\Restaurant\HallController;
+use App\Http\Controllers\Restaurant\PrinterController;
 use App\Http\Controllers\Restaurant\ShiftController;
 use App\Http\Controllers\Restaurant\TableController;
 use App\Http\Controllers\Sales\KitchenController;
@@ -160,6 +161,42 @@ Route::middleware('auth')->group(function () {
         Route::delete('delivery-providers/{deliveryProvider}', [DeliveryProviderController::class, 'destroy'])
             ->middleware('permission:configuracion-editar')
             ->name('delivery-providers.destroy');
+
+        Route::get('printers', [PrinterController::class, 'index'])
+            ->middleware('permission:configuracion-ver')
+            ->name('printers.index');
+
+        Route::get('printers/create', [PrinterController::class, 'create'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.create');
+
+        Route::post('printers', [PrinterController::class, 'store'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.store');
+
+        Route::get('printers/{printer}/edit', [PrinterController::class, 'edit'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.edit');
+
+        Route::put('printers/{printer}', [PrinterController::class, 'update'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.update');
+
+        Route::delete('printers/{printer}', [PrinterController::class, 'destroy'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.destroy');
+
+        Route::post('printers/{printer}/probar', [PrinterController::class, 'test'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.test');
+
+        Route::post('printers/escanear', [PrinterController::class, 'scan'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.scan');
+
+        Route::post('printers/colas', [PrinterController::class, 'queues'])
+            ->middleware('permission:configuracion-editar')
+            ->name('printers.queues');
     });
 
     // Configuración → Sistema
@@ -440,6 +477,14 @@ Route::middleware('auth')->group(function () {
         Route::get('kardex', [KardexController::class, 'index'])
             ->middleware('permission:kardex-ver')
             ->name('kardex.index');
+
+        Route::get('kardex/exportar/pdf', [KardexController::class, 'exportPdf'])
+            ->middleware('permission:kardex-ver')
+            ->name('kardex.export-pdf');
+
+        Route::get('kardex/exportar/excel', [KardexController::class, 'exportExcel'])
+            ->middleware('permission:kardex-ver')
+            ->name('kardex.export-excel');
     });
 
     Route::prefix('pos')->name('pos.')->group(function () {
@@ -450,6 +495,14 @@ Route::middleware('auth')->group(function () {
         Route::put('mesas/{table}/mover', [PosController::class, 'moveTable'])
             ->middleware('permission:pos-ver')
             ->name('tables.move');
+
+        Route::post('mesas/{table}/reservas', [PosController::class, 'reserve'])
+            ->middleware('permission:pos-ventas')
+            ->name('tables.reserve');
+
+        Route::delete('mesas/{table}/reservas', [PosController::class, 'cancelReservation'])
+            ->middleware('permission:pos-ventas')
+            ->name('tables.reservations.cancel');
 
         Route::get('requiere-caja', [PosController::class, 'requiresSession'])
             ->middleware('permission:pos-ver')
@@ -479,6 +532,10 @@ Route::middleware('auth')->group(function () {
             ->middleware(['permission:pos-ventas', 'ensure.pos.session'])
             ->name('sale.add-product');
 
+        Route::post('venta/{sale}/productos/agregar', [PosController::class, 'bulkAddProducts'])
+            ->middleware(['permission:pos-ventas', 'ensure.pos.session'])
+            ->name('sale.add-products');
+
         Route::patch('detalle/{detail}', [PosController::class, 'updateDetailQuantity'])
             ->middleware(['permission:pos-ventas', 'ensure.pos.session'])
             ->name('sale.detail.update');
@@ -495,6 +552,10 @@ Route::middleware('auth')->group(function () {
             ->middleware(['permission:pos-cobro', 'ensure.pos.session'])
             ->name('checkout');
 
+        Route::get('venta/{sale}/precuenta', [PosController::class, 'precuenta'])
+            ->middleware(['permission:pos-ventas', 'ensure.pos.session'])
+            ->name('sale.precuenta');
+
         Route::post('venta/{sale}/pagar', [PosController::class, 'pay'])
             ->middleware(['permission:pos-cobro', 'ensure.pos.session'])
             ->name('pay');
@@ -502,6 +563,10 @@ Route::middleware('auth')->group(function () {
         Route::get('venta/{sale}/comprobante', [PosController::class, 'receipt'])
             ->middleware(['permission:pos-cobro', 'ensure.pos.session'])
             ->name('sale.receipt');
+
+        Route::post('venta/{sale}/comprobante/imprimir', [PosController::class, 'printReceipt'])
+            ->middleware(['permission:pos-cobro', 'ensure.pos.session'])
+            ->name('sale.receipt.print');
 
         Route::get('venta/{sale}/comprobante/xml', [PosController::class, 'receiptXml'])
             ->middleware(['permission:pos-cobro', 'ensure.pos.session'])
@@ -529,6 +594,14 @@ Route::middleware('auth')->group(function () {
         Route::get('ventas', [VentasReportController::class, 'index'])
             ->middleware('permission:reportes-ver')
             ->name('ventas');
+
+        Route::get('ventas/preview', [VentasReportController::class, 'preview'])
+            ->middleware('permission:reportes-ver')
+            ->name('ventas.preview');
+
+        Route::get('ventas/exportar', [VentasReportController::class, 'export'])
+            ->middleware('permission:reportes-ver')
+            ->name('ventas.export');
 
         Route::get('cajas', [CajasReportController::class, 'index'])
             ->middleware('permission:reportes-cajas-ver')

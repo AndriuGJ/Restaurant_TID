@@ -16,3 +16,6 @@ El módulo Cajas usa Route::prefix('cajas')->name('cash-registers.sessions.') co
 
 ## Rutas de Clientes: prefijo clientes con subgrupo empresas
 Clientes usan Route::prefix('clientes')->name('customers.') con permisos clientes-ver (index) y clientes-gestionar (mutation). CompanyClient va bajo clientes/empresas → name customers.companies.*. Registrar clientes/empresas ANTES de clientes/{customer} para evitar conflicto de parámetros.
+
+## Impresión de comprobantes por red (no browser print)
+Los comprobantes se imprimen por red desde el botón "Imprimir en red" que hace POST a pos.sale.receipt.print (PrinterService). El CSS del ticket (pos/receipt.blade.php) usa @page size 80mm auto para que el navegador no muestre A4 ni resuelva el header/footer: el fallback window.print() sigue existiendo pero los headers no se pueden quitar por CSS.

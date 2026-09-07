@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Restaurant\StoreReservationRequest;
 use App\Http\Requests\Sales\AddProductRequest;
+use App\Http\Requests\Sales\BulkAddProductsRequest;
 use App\Http\Requests\Sales\DeliveryInfoRequest;
 use App\Http\Requests\Sales\MoveTableRequest;
 use App\Http\Requests\Sales\PaySaleRequest;
@@ -19,10 +21,12 @@ use App\Models\Kardex\KardexMovement;
 use App\Models\Restaurant\CashRegisterSession;
 use App\Models\Restaurant\DeliveryProvider;
 use App\Models\Restaurant\Hall;
+use App\Models\Restaurant\Reservation;
 use App\Models\Restaurant\Table;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleDetail;
 use App\Models\Sales\SalePayment;
+use App\Services\PrinterService;
 use Greenter\Model\Client\Client as SunatClient;
 use Greenter\Model\Company\Address as SunatAddress;
 use Greenter\Model\Company\Company as SunatCompany;
@@ -43,7 +47,9 @@ class PosController extends Controller
 {
     public function hall(Request $request): View
     {
-        $halls = Hall::with(['tables' => fn ($q) => $q->orderBy('name')])->where('status', true)->get();
+        $halls = Hall::with(['tables' => fn ($q) => $q->orderBy('name')->with('activeReservation')])
+            ->where('status', true)
+            ->get();
 
         $activeHall = $halls->firstWhere('id', $request->integer('hall')) ?? $halls->first();
         $this->arrangeAutoTables($activeHall?->tables ?? collect());
@@ -61,6 +67,40 @@ class PosController extends Controller
         $table->update($request->validated());
 
         return response()->json(['ok' => true]);
+    }
+
+    public function reserve(StoreReservationRequest $request, Table $table): RedirectResponse
+    {
+        if ($table->status === 'occupied') {
+            return redirect()->back()->withErrors('No se puede reservar una mesa ocupada.');
+        }
+
+        $reservation = $table->activeReservation ?? new Reservation;
+
+        $reservation->fill($request->validated() + [
+            'table_id' => $table->id,
+            'user_id' => auth()->id(),
+            'status' => 'active',
+        ])->save();
+
+        $table->update(['status' => 'reserved']);
+
+        Cache::forget('restaurant_tables');
+
+        return redirect()->back()->with('success', 'Mesa reservada a nombre de '.$reservation->customer_name.'.');
+    }
+
+    public function cancelReservation(Table $table): RedirectResponse
+    {
+        $table->activeReservation?->update(['status' => 'cancelled']);
+
+        $table->update([
+            'status' => $table->sales()->whereIn('status', ['pending', 'preparing'])->exists() ? 'occupied' : 'available',
+        ]);
+
+        Cache::forget('restaurant_tables');
+
+        return redirect()->back()->with('success', 'Reserva cancelada.');
     }
 
     public function openSale(Table $table): RedirectResponse
@@ -124,6 +164,14 @@ class PosController extends Controller
         return view('pos.sale', compact('sale', 'categories', 'products', 'deliveryProviders'));
     }
 
+    public function precuenta(Sale $sale): View
+    {
+        $sale->load(['details.product', 'table']);
+        $sale->loadCount('details');
+
+        return view('pos.precuenta', compact('sale'));
+    }
+
     public function addProduct(AddProductRequest $request, Sale $sale): RedirectResponse
     {
         $product = Product::findOrFail($request->input('product_id'));
@@ -147,6 +195,32 @@ class PosController extends Controller
         Cache::forget("sale_{$sale->id}");
 
         return redirect()->back()->with('success', 'Producto agregado al pedido.');
+    }
+
+    public function bulkAddProducts(BulkAddProductsRequest $request, Sale $sale): RedirectResponse
+    {
+        DB::transaction(function () use ($request, $sale) {
+            foreach ($request->input('items') as $item) {
+                $product = Product::findOrFail($item['product_id']);
+                $lineSubtotal = $item['quantity'] * (float) $product->sale_price;
+
+                SaleDetail::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $product->sale_price,
+                    'subtotal' => $lineSubtotal,
+                    'notes' => $item['notes'] ?? null,
+                    'kitchen_status' => 'pending',
+                ]);
+            }
+
+            $this->updateSaleTotals($sale);
+        });
+
+        Cache::forget("sale_{$sale->id}");
+
+        return redirect()->route('pos.sale', $sale)->with('success', 'Productos agregados al pedido.');
     }
 
     public function updateDetailQuantity(Request $request, SaleDetail $detail): RedirectResponse
@@ -263,6 +337,25 @@ class PosController extends Controller
         return view('pos.receipt', compact('sale', 'company', 'whatsappUrl'));
     }
 
+    public function printReceipt(Sale $sale): RedirectResponse
+    {
+        abort_unless(
+            $sale->status === 'paid' && $sale->series && $sale->number,
+            404
+        );
+
+        [$ok, $message] = app(PrinterService::class)->printSale(
+            $sale,
+            $this->emittingCompany()
+        );
+
+        if ($ok) {
+            return redirect()->route('pos.sale.receipt', $sale)->with('success', $message);
+        }
+
+        return redirect()->route('pos.sale.receipt', $sale)->withErrors($message);
+    }
+
     public function receiptXml(Sale $sale): Response
     {
         abort_unless(
@@ -292,6 +385,8 @@ class PosController extends Controller
         $existing = $table->sales()->whereIn('status', ['pending', 'preparing'])->latest('id')->first();
 
         if ($existing) {
+            $table->activeReservation?->update(['status' => 'fulfilled']);
+
             return $existing;
         }
 
@@ -308,6 +403,7 @@ class PosController extends Controller
         ]);
 
         $table->update(['status' => 'occupied']);
+        $table->activeReservation?->update(['status' => 'fulfilled']);
 
         return $sale;
     }
@@ -347,7 +443,9 @@ class PosController extends Controller
     private function releaseTable(Sale $sale): void
     {
         if ($sale->table_id) {
-            $sale->table()->update(['status' => 'available']);
+            $sale->table()->update([
+                'status' => $sale->table->activeReservation ? 'reserved' : 'available',
+            ]);
         }
     }
 
@@ -389,19 +487,22 @@ class PosController extends Controller
             return null;
         }
 
-        $config = $this->activeSunatConfig();
-        $sequence = $config ? $config->used_receipts + 1 : 1;
+        $config = $this->activeSunatConfig($documentType->id);
 
-        if ($config) {
-            $config->increment('used_receipts');
+        if (! $config) {
+            return null;
         }
+
+        $sequence = $config->used_receipts + 1;
+        $config->increment('used_receipts');
 
         return str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
     }
 
-    private function activeSunatConfig(): ?SunatConfig
+    private function activeSunatConfig(int $documentTypeId): ?SunatConfig
     {
         return SunatConfig::where('status', 'active')
+            ->where('document_type_id', $documentTypeId)
             ->whereDate('start_date', '<=', now())
             ->whereDate('end_date', '>=', now())
             ->whereColumn('used_receipts', '<', 'max_receipts')

@@ -66,12 +66,12 @@ Ejemplo patrón:
 
 El panel (layout `app`) usa un **contraste limpio** con la marca:
 
-- **Header**: fondo blanco, borde inferior `gray-200`, logo en tile `brand-500`, usuario con avatar circular `brand`, botón "Cerrar sesión" outline con hover `brand`.
-- **Sidebar (escritorio) y drawer (móvil)**: fondo **`slate-900`/`slate-950`** oscuro (moderno, estilo sistema POS). Secciones en `slate-500` mayúsculas; items en `slate-300/400`; item activo → `bg-brand-500/15 text-brand-400`; hover → `bg-slate-800 text-white`.
+- **Header**: fondo `bg-slate-900`, borde inferior `slate-800`, logo en tile `brand-500`, título `font-display` en blanco, avatar circular `brand-500/20` con iniciales `brand-300`, nombre de usuario `gray-300`, botón "Cerrar sesión" outline con hover `brand-400`/`brand-500`.
+- **Sidebar (escritorio) y drawer (móvil)**: fondo `slate-900`, borde `slate-800`. Secciones en `slate-500` mayúsculas; items en `slate-300/400`; item activo → `bg-brand-500/15 text-brand-400`; hover → `bg-slate-800 text-white`.
 - **Main content**: fondo `gray-100` (claro) para legibilidad de tablas y tarjetas.
-- **Footer**: `slate-900`, texto `slate-400`, acento del nombre en `slate-300`.
+- **Footer**: `bg-slate-900`, borde superior `slate-800`, texto `slate-400`, nombre de la empresa en `slate-300`.
 
-> El contraste oscuro (sidebar) + claro (contenido) + acento naranja (brand) es la firma visual del sistema.
+> El contraste oscuro (header/sidebar/footer slate) + contenido claro `gray-100` + acento naranja `brand-500` es la firma visual del sistema.
 
 ### 4.1 Layout y footer fijo al fondo
 Para que el **footer siempre quede al final** de la ventana aunque el contenido sea corto, el layout `app` usa una columna flex de altura completa:

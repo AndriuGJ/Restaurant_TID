@@ -39,7 +39,7 @@
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700">Nombre</label>
                 <input id="name" name="name" type="text" value="{{ old('name', $company->name ?? '') }}" required
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                    class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
                 @error('name')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -48,7 +48,7 @@
             <div>
                 <label for="commercial_name" class="block text-sm font-medium text-gray-700">Nombre comercial</label>
                 <input id="commercial_name" name="commercial_name" type="text" value="{{ old('commercial_name', $company->commercial_name ?? '') }}"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                    class="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
             </div>
         </div>
 
@@ -56,7 +56,7 @@
             <div>
                 <label for="ruc" class="block text-sm font-medium text-gray-700">RUC</label>
                 <input id="ruc" name="ruc" type="text" value="{{ old('ruc', $company->ruc ?? '') }}" required maxlength="11"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                    class="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
                 @error('ruc')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -65,7 +65,7 @@
             <div class="col-span-2">
                 <label for="social_reason" class="block text-sm font-medium text-gray-700">Razón social</label>
                 <input id="social_reason" name="social_reason" type="text" value="{{ old('social_reason', $company->social_reason ?? '') }}" required
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                    class="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
                 @error('social_reason')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror

@@ -4,6 +4,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 
 | Applies to | Rule file |
 | --- | --- |
+| bootstrap/app.php | .ai/rules/bootstrap.md |
 | app/Http/Controllers/CashRegisters/** | .ai/rules/cash-registers.md |
 | app/Http/Controllers/Configuration/** | .ai/rules/configuration.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
@@ -14,9 +15,12 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/views/layouts/** | .ai/rules/layouts.md |
 | resources/views/_partials/sidebar.blade.php | .ai/rules/partials.md |
 | app/Http/Controllers/Reports/** | .ai/rules/reports.md |
+| app/Http/Requests/Sales/** | .ai/rules/requests-sales.md |
+| app/Http/Controllers/Restaurant/** | .ai/rules/restaurant.md |
 | routes/web.php | .ai/rules/routes.md |
-| app/Http/Controllers/Sales/**, app/Http/Controllers/Sales/KitchenController.php | .ai/rules/sales.md |
+| app/Http/Controllers/Sales/**, app/Http/Controllers/Sales/KitchenController.php, app/Http/Controllers/Sales/PosController.php | .ai/rules/sales.md |
 | database/seeders/** | .ai/rules/seeders.md |
+| app/Services/**, app/Services/PrinterService.php | .ai/rules/services.md |
 | tests/Pest.php | .ai/rules/tests.md |
 | app/Http/Controllers/Users/** | .ai/rules/users.md |
-| resources/views/** | .ai/rules/views.md |
+| resources/views/**, resources/views/**/*.blade.php | .ai/rules/views.md |

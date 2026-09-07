@@ -58,3 +58,13 @@ test('kardex can be filtered by product', function () {
         ->assertSee('111.11')
         ->assertDontSee('222.22');
 });
+
+test('admin can export the kardex pdf', function () {
+    $product = Product::factory()->supply()->create();
+    KardexMovement::factory()->create(['product_id' => $product->id, 'balance' => 25]);
+
+    $this->actingAs(createKardexAdmin())
+        ->get(route('inventory.kardex.export-pdf'))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf');
+});

@@ -8,7 +8,7 @@
         <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Punto de Venta · Salón</h1>
-                <p class="mt-1 text-sm text-gray-600">Arrastra las mesas para ubicarlas. Haz clic en una mesa para abrir o continuar su venta.</p>
+                <p class="mt-1 text-sm text-gray-600">Arrastra las mesas para ubicarlas. Haz clic en una mesa para ver sus opciones (venta o reserva).</p>
             </div>
 
             {{-- Barra de acciones --}}
@@ -68,7 +68,7 @@
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
-                Arrastra para mover · clic para abrir
+                Arrastra para mover · clic para opciones · clic derecho para venta
             </span>
         </div>
 
@@ -93,10 +93,73 @@
                         </a>
                     </div>
                 @endforelse
+                <div id="table-context-menu"
+                    class="absolute z-20 hidden w-48 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+                <button type="button" data-menu-open-sale
+                    class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-brand-600">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008Zm0 2.25h.008v.008H8.25V13.5Zm0 2.25H8.25v.008H8.25V15.75Zm6.75-2.25h.008v.008H15V13.5Zm0 2.25h.008v.008H15V15.75Zm-6.75 3h.008v.008H8.25v-.008Zm6.75 0h.008v.008H15v-.008Zm-3.75-5.25h.008v.008H11.25v-.008Zm0 2.25h.008v.008H11.25v-.008Zm0 2.25h.008v.008H11.25v-.008ZM4.5 21h15M7.5 6.75h9M7.5 6.75a1.5 1.5 0 0 0-1.5-1.5H4.5m13.5 1.5a1.5 1.5 0 0 1 1.5-1.5h1.5m-4.5 0V3.75A1.5 1.5 0 0 0 15 2.25H9.75a1.5 1.5 0 0 0-1.5 1.5v3m6.75 0h.008v.008H15V6.75Z" />
+                    </svg>
+                    Realizar venta
+                </button>
+                <button type="button" data-menu-reserve
+                    class="hidden flex w-full items-center gap-2.5 border-t border-gray-100 px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-brand-600">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-6.75-6h.008v.008h-.008V12Zm0 2.25h.008v.008h-.008V14.25Zm0 2.25h.008v.008h-.008V16.5Z" />
+                    </svg>
+                    Reservar mesa
+                </button>
+                <button type="button" data-menu-cancel-reserve
+                    class="hidden flex w-full items-center gap-2.5 border-t border-gray-100 px-3 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v3.75m-3.75 6.75h7.5a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                    </svg>
+                    Cancelar reserva
+                </button>
             </div>
         </div>
+    </div>
 
-        <div id="pos-error" class="hidden rounded-md bg-red-50 p-3 text-sm text-red-800"></div>
+    <div id="reserve-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-900/50 p-4">
+        <div class="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Reservar mesa</h2>
+                <button type="button" data-modal-close
+                    class="rounded-md p-1 text-gray-400 transition hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <p id="reserve-modal-table" class="mt-0.5 text-sm text-gray-600"></p>
+            <form id="reserve-form" class="mt-4 space-y-4">
+                <div>
+                    <label for="reserve-name" class="block text-sm font-medium text-gray-700">A nombre de quién</label>
+                    <input id="reserve-name" name="customer_name" type="text" autocomplete="off"
+                        placeholder="Nombre del cliente"
+                        class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label for="reserve-people" class="block text-sm font-medium text-gray-700">¿Cuántas personas son?</label>
+                    <input id="reserve-people" name="people_count" type="number" min="1" max="99" value="2"
+                        class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                </div>
+                <div id="reserve-error" class="hidden rounded-md bg-red-50 p-3 text-sm text-red-800"></div>
+                <div class="flex items-center justify-end gap-2 pt-1">
+                    <button type="button" data-modal-close
+                        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600">
+                        Confirmar reserva
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="pos-error" class="hidden rounded-md bg-red-50 p-3 text-sm text-red-800"></div>
     </div>
 @endsection
 
@@ -108,12 +171,54 @@
             const errorBox = document.getElementById('pos-error');
             const selector = document.getElementById('hall-selector');
 
-            let moved = false;
+            const menu = document.getElementById('table-context-menu');
+            const menuOpenSale = menu.querySelector('[data-menu-open-sale]');
+            const menuReserve = menu.querySelector('[data-menu-reserve]');
+            const menuCancel = menu.querySelector('[data-menu-cancel-reserve]');
+
+            const modal = document.getElementById('reserve-modal');
+            const modalTable = document.getElementById('reserve-modal-table');
+            const reserveForm = document.getElementById('reserve-form');
+            const reserveError = document.getElementById('reserve-error');
+
+            let currentNode = null;
+            let currentReserveUrl = null;
 
             const showError = (message) => {
                 errorBox.textContent = message;
                 errorBox.classList.remove('hidden');
             };
+
+            const hideMenu = () => {
+                menu.classList.add('hidden');
+                currentNode = null;
+            };
+
+            const showMenu = (node, e) => {
+                currentNode = node;
+                const canvas = document.getElementById('pos-canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+                const status = node.dataset.status;
+                const hasReservation = node.dataset.hasReservation === '1';
+
+                menuReserve.classList.toggle('hidden', status === 'occupied' || (status === 'reserved' && hasReservation));
+                menuCancel.classList.toggle('hidden', !(status === 'reserved' && hasReservation));
+
+                menu.classList.remove('hidden');
+                menu.style.left = `${Math.min(Math.max(4, e.clientX - canvasRect.left), canvasRect.width - menu.offsetWidth - 4)}px`;
+                menu.style.top = `${Math.min(Math.max(4, e.clientY - canvasRect.top), canvasRect.height - menu.offsetHeight - 4)}px`;
+            };
+
+            const openReserveModal = (node) => {
+                currentReserveUrl = node.dataset.reserveUrl;
+                modalTable.textContent = `Mesa ${node.dataset.tableName}`;
+                document.getElementById('reserve-name').value = '';
+                document.getElementById('reserve-people').value = 2;
+                reserveError.classList.add('hidden');
+                modal.classList.remove('hidden');
+            };
+
+            const closeReserveModal = () => modal.classList.add('hidden');
 
             nodes.forEach((node) => {
                 let dragged = false;
@@ -124,7 +229,6 @@
 
                 node.addEventListener('pointerdown', (e) => {
                     dragged = false;
-                    moved = false;
                     startX = e.clientX;
                     startY = e.clientY;
                     const rect = node.getBoundingClientRect();
@@ -139,7 +243,6 @@
                     const dy = e.clientY - startY;
                     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
                         dragged = true;
-                        moved = true;
                     }
                     if (!dragged) return;
 
@@ -155,31 +258,122 @@
 
                 node.addEventListener('pointerup', (e) => {
                     node.releasePointerCapture(e.pointerId);
-                    if (!dragged) {
-                        window.location.href = node.dataset.openUrl;
+                    if (dragged) {
+                        const canvas = document.getElementById('pos-canvas');
+                        const canvasRect = canvas.getBoundingClientRect();
+                        const x = Math.round(e.clientX - canvasRect.left - offsetX);
+                        const y = Math.round(e.clientY - canvasRect.top - offsetY);
+
+                        fetch(node.dataset.moveUrl, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                pos_x: Math.max(0, x),
+                                pos_y: Math.max(0, y),
+                            }),
+                        }).then((res) => {
+                            if (!res.ok) throw new Error('No se pudo guardar la posición');
+                        }).catch((err) => showError(err.message));
                         return;
                     }
-                    const tableId = node.dataset.tableId;
-                    const canvas = document.getElementById('pos-canvas');
-                    const canvasRect = canvas.getBoundingClientRect();
-                    const x = Math.round(e.clientX - canvasRect.left - offsetX);
-                    const y = Math.round(e.clientY - canvasRect.top - offsetY);
 
-                    fetch(node.dataset.moveUrl, {
-                        method: 'PUT',
+                    if (e.button !== 0) return;
+                    hideMenu();
+                    showMenu(node, e);
+                });
+
+                node.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    hideMenu();
+                    window.location.href = node.dataset.openUrl;
+                });
+            });
+
+            menuOpenSale.addEventListener('click', () => {
+                if (currentNode) {
+                    window.location.href = currentNode.dataset.openUrl;
+                }
+            });
+
+            menuReserve.addEventListener('click', () => {
+                if (!currentNode) return;
+                const node = currentNode;
+                hideMenu();
+                openReserveModal(node);
+            });
+
+            menuCancel.addEventListener('click', () => {
+                if (!currentNode) return;
+                const tableName = currentNode.dataset.tableName;
+                hideMenu();
+                if (!window.confirm(`¿Cancelar la reserva de la mesa ${tableName}?`)) return;
+                fetch(currentNode.dataset.cancelReserveUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrf,
+                        'Accept': 'application/json',
+                    },
+                }).then((res) => {
+                    if (!res.ok) throw new Error('No se pudo cancelar la reserva');
+                    window.location.reload();
+                }).catch((err) => showError(err.message));
+            });
+
+            document.querySelectorAll('[data-modal-close]').forEach((btn) => {
+                btn.addEventListener('click', closeReserveModal);
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeReserveModal();
+            });
+
+            reserveForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                reserveError.classList.add('hidden');
+                const body = new FormData(reserveForm);
+
+                try {
+                    const res = await fetch(currentReserveUrl, {
+                        method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': csrf,
                             'Accept': 'application/json',
                         },
-                        body: JSON.stringify({
-                            pos_x: Math.max(0, x),
-                            pos_y: Math.max(0, y),
-                        }),
-                    }).then((res) => {
-                        if (!res.ok) throw new Error('No se pudo guardar la posición');
-                    }).catch((err) => showError(err.message));
-                });
+                        body,
+                    });
+
+                    if (res.ok) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    let message = 'No se pudo guardar la reserva.';
+                    try {
+                        const data = await res.json();
+                        message = Object.values(data.errors || {}).flat()[0] || message;
+                    } catch { /* respuesta sin JSON */ }
+                    reserveError.textContent = message;
+                    reserveError.classList.remove('hidden');
+                } catch (err) {
+                    reserveError.textContent = err.message;
+                    reserveError.classList.remove('hidden');
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('#table-context-menu') || e.target.closest('[data-table-node]')) return;
+                hideMenu();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hideMenu();
+                    closeReserveModal();
+                }
             });
 
             selector.addEventListener('change', () => {

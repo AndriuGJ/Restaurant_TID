@@ -11,6 +11,7 @@ class SunatConfig extends Model
 
     protected $fillable = [
         'company_id',
+        'document_type_id',
         'start_date',
         'end_date',
         'status',
@@ -31,5 +32,10 @@ class SunatConfig extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function documentType()
+    {
+        return $this->belongsTo(DocumentType::class);
     }
 }

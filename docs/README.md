@@ -91,10 +91,12 @@ DB_PASSWORD=
 ```bash
 # 3. Instalar dependencias adicionales necesarias para el flujo descrito
 composer require spatie/laravel-permission     # Roles y permisos
-composer require barryvdh/laravel-dompdf       # Boletas / Facturas en PDF
+composer require tecnickcom/tcpdf             # Boletas / Facturas en PDF
 composer require intervention/image            # Fotos de platos e imagen de la empresa
 ```
 
+> **TCPDF**: después de instalar, ejecutar `make fonts` dentro de `vendor/tecnickcom/tc-lib-pdf-font` una vez (genera las tipografías en `target/fonts/`); sin ese paso los PDF no se generan.
+>
 > **Notificación por WhatsApp** (envío de comprobante): el documento la menciona como opción en la sección de Cobro. No hay un paquete oficial de Laravel para esto; se integra vía la API de WhatsApp Business o un proveedor externo (Twilio, Meta Cloud API, etc.) cuando llegues a esa parte — no es necesaria para que el resto del sistema funcione.
 
 > **Actualización en tiempo real de cocina** (submódulo Preparación): para que las comandas aparezcan sin recargar la página, usa Laravel Echo + un driver de broadcasting (Pusher, Reverb, o Soketi). Instálalo cuando implementes ese submódulo; el resto del sistema no depende de esto.
@@ -207,7 +209,7 @@ El documento aclara varias **reglas de negocio** que exigen datos base antes de 
 - Resumen de `SaleDetail` (detalle) + selección opcional de `Customer`/`CompanyClient` (si no se elige, queda "público general").
 - Selección de `DocumentType` (Boleta/Factura) — **validar que `SunatConfig` esté vigente antes de permitir emitir**.
 - Uno o varios `SalePayment` (permite dividir el pago entre varios `PaymentMethod`, cada uno con su `amount`) hasta cubrir el `total`.
-- Al confirmar: `Sale.status = 'paid'`, se generan los `KardexMovement` correspondientes, y se ofrece imprimir el comprobante (PDF con `barryvdh/laravel-dompdf`) o enviarlo por WhatsApp.
+- Al confirmar: `Sale.status = 'paid'`, se generan los `KardexMovement` correspondientes, y se ofrece imprimir el comprobante (PDF con `App\Services\TcpdfService`) o enviarlo por WhatsApp.
 
 **Preparación (Chef):**
 - Vista tipo tarjetas de `SaleDetail` con `kitchen_status = 'pending'`, agrupadas por `Sale` (mesa, hora, platos, notas).

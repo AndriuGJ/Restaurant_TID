@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Configuration\StoreSunatConfigRequest;
 use App\Http\Requests\Configuration\UpdateSunatConfigRequest;
 use App\Models\Configuration\Company;
+use App\Models\Configuration\DocumentType;
 use App\Models\Configuration\SunatConfig;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
@@ -15,7 +17,7 @@ class SunatConfigController extends Controller
 {
     public function index(): View
     {
-        $sunatConfigs = SunatConfig::with('company')->latest('id')->paginate(10);
+        $sunatConfigs = SunatConfig::with(['company', 'documentType'])->latest('id')->paginate(10);
 
         return view('configuration.sunat-configs.index', compact('sunatConfigs'));
     }
@@ -23,8 +25,9 @@ class SunatConfigController extends Controller
     public function create(): View
     {
         $companies = Company::orderBy('name')->get(['id', 'name']);
+        $documentTypes = $this->invoiceDocumentTypes();
 
-        return view('configuration.sunat-configs.create', compact('companies'));
+        return view('configuration.sunat-configs.create', compact('companies', 'documentTypes'));
     }
 
     public function store(StoreSunatConfigRequest $request): RedirectResponse
@@ -40,8 +43,9 @@ class SunatConfigController extends Controller
     public function edit(SunatConfig $sunatConfig): View
     {
         $companies = Company::orderBy('name')->get(['id', 'name']);
+        $documentTypes = $this->invoiceDocumentTypes();
 
-        return view('configuration.sunat-configs.edit', compact('sunatConfig', 'companies'));
+        return view('configuration.sunat-configs.edit', compact('sunatConfig', 'companies', 'documentTypes'));
     }
 
     public function update(UpdateSunatConfigRequest $request, SunatConfig $sunatConfig): RedirectResponse
@@ -62,5 +66,10 @@ class SunatConfigController extends Controller
 
         return redirect()->route('configuration.sunat-configs.index')
             ->with('success', 'Configuración SUNAT eliminada correctamente.');
+    }
+
+    private function invoiceDocumentTypes(): Collection
+    {
+        return DocumentType::where('type', 'invoice')->where('status', true)->orderBy('nomenclature')->get(['id', 'name', 'nomenclature']);
     }
 }

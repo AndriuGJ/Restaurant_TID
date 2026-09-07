@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             // Inventario
             PurchaseCategorySeeder::class,
             ProductCategorySeeder::class,
+            PeruvianMenuSeeder::class,
         ]);
 
         User::factory()->create([

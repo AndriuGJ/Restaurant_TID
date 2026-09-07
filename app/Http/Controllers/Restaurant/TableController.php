@@ -8,16 +8,24 @@ use App\Http\Requests\Restaurant\UpdateTableRequest;
 use App\Models\Restaurant\Hall;
 use App\Models\Restaurant\Table;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class TableController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $tables = Table::with('hall')->latest('id')->paginate(10);
+        $hallId = $request->integer('hall_id');
+        $tables = Table::with('hall')
+            ->when($hallId, fn ($query) => $query->where('hall_id', $hallId))
+            ->latest('id')
+            ->paginate(10)
+            ->withQueryString();
 
-        return view('restaurant.tables.index', compact('tables'));
+        $halls = Hall::where('status', true)->orderBy('name')->get();
+
+        return view('restaurant.tables.index', compact('tables', 'halls', 'hallId'));
     }
 
     public function create(): View

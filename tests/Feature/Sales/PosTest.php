@@ -110,6 +110,78 @@ test('adding a product updates the sale totals', function () {
     ]);
 });
 
+test('adding several products at once creates all details and updates totals', function () {
+    $table = Table::factory()->create();
+    $sale = Sale::factory()->atTable($table)->create(['subtotal' => 0, 'total' => 0]);
+    $lomo = Product::factory()->dish()->create(['sale_price' => 38.00]);
+    $papa = Product::factory()->dish()->create(['sale_price' => 18.00]);
+
+    $this->actingAs(createPosAdmin())
+        ->from(route('pos.sale', $sale))
+        ->post(route('pos.sale.add-products', $sale), [
+            'items' => [
+                ['product_id' => $lomo->id, 'quantity' => 2, 'notes' => 'poco jugoso'],
+                ['product_id' => $papa->id, 'quantity' => 1, 'notes' => ''],
+            ],
+        ])
+        ->assertRedirect(route('pos.sale', $sale));
+
+    $sale = $sale->fresh();
+
+    $this->assertSame(94.0, (float) $sale->total);
+    $this->assertDatabaseHas('sale_details', [
+        'sale_id' => $sale->id,
+        'product_id' => $lomo->id,
+        'quantity' => 2,
+        'unit_price' => 38.00,
+        'subtotal' => 76.00,
+        'notes' => 'poco jugoso',
+        'kitchen_status' => 'pending',
+    ]);
+    $this->assertDatabaseHas('sale_details', [
+        'sale_id' => $sale->id,
+        'product_id' => $papa->id,
+        'quantity' => 1,
+        'unit_price' => 18.00,
+        'subtotal' => 18.00,
+    ]);
+});
+
+test('the bulk add requires at least one valid product', function () {
+    $sale = Sale::factory()->create();
+
+    $this->actingAs(createPosAdmin())
+        ->post(route('pos.sale.add-products', $sale), [
+            'items' => [],
+        ])
+        ->assertSessionHasErrors('items');
+});
+
+test('the pos sale page shows the bulk cart and keeps the detail steppers', function () {
+    $table = Table::factory()->create();
+    $sale = Sale::factory()->atTable($table)->create();
+    SaleDetail::factory()->create(['sale_id' => $sale->id]);
+
+    $this->actingAs(createPosAdmin())
+        ->get(route('pos.sale', $sale))
+        ->assertOk()
+        ->assertSee('Agregar al pedido')
+        ->assertSee('pos-cart', false)
+        ->assertSee('pos-detail', false);
+});
+
+test('the pos sale page shows quantities without decimals', function () {
+    $table = Table::factory()->create();
+    $sale = Sale::factory()->atTable($table)->create();
+    SaleDetail::factory()->create(['sale_id' => $sale->id, 'quantity' => 4]);
+
+    $this->actingAs(createPosAdmin())
+        ->get(route('pos.sale', $sale))
+        ->assertOk()
+        ->assertSee('value="4"', false)
+        ->assertDontSee('value="4.00"', false);
+});
+
 test('the pos sale page shows product images', function () {
     $sale = Sale::factory()->create();
     $product = Product::factory()->dish()->create([
@@ -240,6 +312,28 @@ test('moving a table updates its position', function () {
 
     $this->assertSame(320, $table->pos_x);
     $this->assertSame(240, $table->pos_y);
+});
+
+test('the checkout page shows the guests stepper and quick amounts', function () {
+    $table = Table::factory()->create();
+    $sale = Sale::factory()->atTable($table)->create(['guests' => 2]);
+    $documentType = DocumentType::factory()->boleta()->create();
+    $paymentMethod = PaymentMethod::factory()->create();
+
+    $this->actingAs(createPosAdmin())
+        ->get(route('pos.checkout', $sale))
+        ->assertOk()
+        ->assertSee('data-guests-minus', false)
+        ->assertSee('data-guests-plus', false)
+        ->assertSee('value="2"', false)
+        ->assertSee('data-quick-amount="20"', false)
+        ->assertSee('data-quick-amount="50"', false)
+        ->assertSee('data-quick-amount="100"', false)
+        ->assertSee('data-quick-amount="200"', false)
+        ->assertSee('btn.dataset.quickAmount', false)
+        ->assertDontSee('btn.dataset.amount', false)
+        ->assertSee($documentType->name)
+        ->assertSee($paymentMethod->name);
 });
 
 test('admin can render the sale and checkout pages', function () {
@@ -435,6 +529,13 @@ test('a boleta is emitted without requiring a company client or ruc', function (
     $sale = Sale::factory()->create(['subtotal' => 40, 'total' => 40]);
     $documentType = DocumentType::factory()->boleta()->create();
     $paymentMethod = PaymentMethod::factory()->create();
+    SunatConfig::factory()->boleta()->create([
+        'status' => 'active',
+        'start_date' => now()->subDays(10),
+        'end_date' => now()->addDays(10),
+        'max_receipts' => 100,
+        'used_receipts' => 4,
+    ]);
 
     $this->actingAs(createPosAdmin())
         ->post(route('pos.pay', $sale), [
@@ -450,12 +551,68 @@ test('a boleta is emitted without requiring a company client or ruc', function (
     $this->assertSame('paid', $sale->status);
     $this->assertNull($sale->clientable_type);
     $this->assertSame('B001', $sale->series);
+    $this->assertSame('00000005', $sale->number);
+    $this->assertSame(5, SunatConfig::query()->latest('id')->first()->used_receipts);
+});
+
+test('emitting a boleta rejects when its block is exhausted', function () {
+    $sale = Sale::factory()->create(['subtotal' => 40, 'total' => 40]);
+    $documentType = DocumentType::factory()->boleta()->create();
+    $paymentMethod = PaymentMethod::factory()->create();
+    SunatConfig::factory()->boleta()->create([
+        'status' => 'active',
+        'start_date' => now()->subDays(10),
+        'end_date' => now()->addDays(10),
+        'max_receipts' => 2,
+        'used_receipts' => 2,
+    ]);
+
+    $this->actingAs(createPosAdmin())
+        ->post(route('pos.pay', $sale), [
+            'document_type_id' => $documentType->id,
+            'payments' => [
+                ['payment_method_id' => $paymentMethod->id, 'amount' => 40.00],
+            ],
+        ])
+        ->assertSessionHasErrors('document_type_id');
+
+    $this->assertSame('pending', $sale->fresh()->status);
+});
+
+test('a factura cannot use a boleta block', function () {
+    $sale = Sale::factory()->create(['subtotal' => 80, 'total' => 80]);
+    $documentType = DocumentType::factory()->invoice()->create();
+    $paymentMethod = PaymentMethod::factory()->create();
+    $company = CompanyClient::factory()->create();
+    SunatConfig::factory()->boleta()->create([
+        'status' => 'active',
+        'start_date' => now()->subDays(10),
+        'end_date' => now()->addDays(10),
+    ]);
+
+    $this->actingAs(createPosAdmin())
+        ->post(route('pos.pay', $sale), [
+            'clientable_type' => 'company',
+            'clientable_id' => $company->id,
+            'document_type_id' => $documentType->id,
+            'payments' => [
+                ['payment_method_id' => $paymentMethod->id, 'amount' => 80.00],
+            ],
+        ])
+        ->assertSessionHasErrors('document_type_id');
+
+    $this->assertSame('pending', $sale->fresh()->status);
 });
 
 test('paying with more money that the total records the change', function () {
     $sale = Sale::factory()->create(['subtotal' => 45, 'total' => 45]);
     $cash = PaymentMethod::factory()->create();
     $boleta = DocumentType::factory()->boleta()->create();
+    SunatConfig::factory()->boleta()->create([
+        'status' => 'active',
+        'start_date' => now()->subDays(10),
+        'end_date' => now()->addDays(10),
+    ]);
 
     $this->actingAs(createPosAdmin())
         ->post(route('pos.pay', $sale), [

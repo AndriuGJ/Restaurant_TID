@@ -78,7 +78,16 @@ class PaySaleRequest extends FormRequest
             return;
         }
 
-        // La boleta se emite siempre sin exigir RUC; solo la factura requiere una empresa (RUC).
+        // Tanto la boleta como la factura exigen su propio bloque SUNAT autorizado
+        // (correlativo) vigente y con tope disponible; solo la factura exige además
+        // una empresa (RUC). Se distinguen por nomenclature 'B' vs 'F', ambos con type='invoice'.
+        if ($this->activeSunatConfig($documentType) === null) {
+            $validator->errors()->add(
+                'document_type_id',
+                'No hay un bloque SUNAT vigente y con tope disponible para emitir el comprobante seleccionado.'
+            );
+        }
+
         if (mb_strtoupper($documentType->nomenclature) === 'F') {
             $this->validateFacturaClient($validator);
         }
@@ -99,21 +108,13 @@ class PaySaleRequest extends FormRequest
 
         if (! $company) {
             $validator->errors()->add('clientable_id', 'Seleccione la empresa a la que se emite la factura.');
-
-            return;
-        }
-
-        if ($this->activeSunatConfig() === null) {
-            $validator->errors()->add(
-                'document_type_id',
-                'No hay un bloque SUNAT vigente disponible para emitir la factura.'
-            );
         }
     }
 
-    private function activeSunatConfig(): ?SunatConfig
+    private function activeSunatConfig(DocumentType $documentType): ?SunatConfig
     {
         return SunatConfig::where('status', 'active')
+            ->where('document_type_id', $documentType->id)
             ->whereDate('start_date', '<=', now())
             ->whereDate('end_date', '>=', now())
             ->whereColumn('used_receipts', '<', 'max_receipts')
